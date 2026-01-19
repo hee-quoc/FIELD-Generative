@@ -14,7 +14,7 @@ function injectUIFont() {
       font-weight: normal;
       font-style: normal;
     }
-    #fg-ui, #fg-ui * {
+    #fg-ui, #fg-ui *, #fg-help, #fg-help * {
       font-family: "UIFont", sans-serif !important;
       letter-spacing: 0.2px;
     }
@@ -46,6 +46,8 @@ function createUI() {
     zIndex: "99999",
   });
   document.body.appendChild(panel);
+	createHelpPanel();
+
 
   /* ================= HEADER ================= */
   const header = document.createElement("div");
@@ -107,6 +109,7 @@ function createUI() {
   panel.appendChild(paletteWrap);
   window.__FG_PALETTE_WRAP = paletteWrap;
   updatePalettePreviewUI();
+	updateBodyBackground();
 
   /* ================= SECTION TITLE ================= */
   function addSectionTitle(txt) {
@@ -186,10 +189,76 @@ function createUI() {
     wrap.appendChild(sl);
     panel.appendChild(wrap);
   }
+function createHelpPanel() {
+  const panel = document.createElement("div");
+  panel.id = "fg-help";
+
+  Object.assign(panel.style, {
+    position: "fixed",
+    top: "0",
+    right: "0",
+    width: "300px",
+    height: "100vh",
+    padding: "16px",
+    boxSizing: "border-box",
+    background: "rgba(0,0,0,0.35)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+    borderLeft: "1px solid rgba(255,255,255,0.12)",
+    color: "#eee",
+    overflowY: "auto",
+    zIndex: "99998",
+  });
+
+  panel.innerHTML = `
+    <div style="font-size:15px;font-weight:600;letter-spacing:0.4px;margin-bottom:12px;">
+      HOW TO USE
+    </div>
+
+    <div style="font-size:12px;line-height:1.55;opacity:0.75;">
+      <strong>PALETTE CONTROLS</strong><br><br>
+
+      • <b>Saturation</b><br>
+      Controls the color intensity.<br>
+      Higher values produce stronger colors.<br><br>
+
+      • <b>Brightness</b><br>
+      Controls overall lightness of the palette.<br>
+      Higher values create brighter visuals.<br><br>
+
+      • <b>Hue Bins</b><br>
+      Defines how many distinct hue groups are used.<br>
+      Higher values increase color variation.<br><br>
+
+      • <b>Sample Step</b><br>
+      Controls how densely colors are sampled from an image.<br>
+      Lower values capture more detail.<br><br>
+
+<strong>VIEW & EXPORT</strong><br><br>
+
+• <b>Realtime View</b><br>
+Preview and adjust visuals in real time.<br><br>
+
+• <b>Export Image</b><br>
+Save the current frame as an image.<br><br>
+
+• <b>Render Video (PNG)</b><br>
+Generate a high-quality image sequence for video export.<br>
+Render quality depends on your machine performance.<br><br>
+
+<strong>RENDER NOTE</strong><br><br>
+For best results, use Render Video on a powerful machine.<br>
+Stronger hardware allows smoother motion and higher visual fidelity.
+</div>
+  `;
+
+  document.body.appendChild(panel);
+}
+
 
   /* ================= SLIDERS ================= */
   addSectionTitle("Palette Controls");
-  addSlider("Min Saturation", "minSaturation", 0, 100);
+  addSlider("Saturation", "minSaturation", 0, 100);
   addSlider("Brightness", "brightness", 0, 100);
   addSlider("Hue Bins", "hueBins", 3, 12, 1);
   addSlider("Sample Step", "sampleStep", 1, 10, 1);
@@ -241,6 +310,7 @@ function createUI() {
     }
     ensureFullPalette();
     updatePalettePreviewUI();
+	  updateBodyBackground();
   };
 
   /* ================= SHUFFLE ================= */
@@ -250,9 +320,13 @@ function createUI() {
       [gradients[i], gradients[j]] = [gradients[j], gradients[i]];
     }
     updatePalettePreviewUI();
+	  updateBodyBackground();
   };
 }
 
+/* ==========================================================
+   PALETTE PREVIEW UI
+========================================================== */
 /* ==========================================================
    PALETTE PREVIEW UI
 ========================================================== */
@@ -261,9 +335,13 @@ function updatePalettePreviewUI() {
   if (!wrap) return;
 
   wrap.innerHTML = "";
-  for (let i = 0; i < gradientCount; i++) {
+
+  const visibleCount = Math.max(0, gradientCount - 2);
+
+  for (let i = 0; i < visibleCount; i++) {
     let c = gradients[i];
-    let sw = document.createElement("div");
+
+    const sw = document.createElement("div");
     Object.assign(sw.style, {
       width: "32px",
       height: "32px",
@@ -271,13 +349,42 @@ function updatePalettePreviewUI() {
       border: "1px solid rgba(255,255,255,0.2)",
       background: p5ColorToHex(c),
       cursor: "pointer",
+      position: "relative",
     });
 
-    sw.onclick = () => {
-      navigator.clipboard.writeText(p5ColorToHex(c));
+    sw.title = "Click to edit color";
+
+    const picker = document.createElement("input");
+    picker.type = "color";
+    picker.value = p5ColorToHex(c);
+    Object.assign(picker.style, {
+      position: "absolute",
+      inset: "0",
+      opacity: "0",
+      cursor: "pointer",
+    });
+
+    picker.onfocus = () => {
       sw.style.outline = "2px solid #fff";
-      setTimeout(() => sw.style.outline = "none", 400);
     };
+
+    picker.onblur = () => {
+      sw.style.outline = "none";
+    };
+
+    picker.oninput = e => {
+      const hex = e.target.value;
+
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+
+      gradients[i] = color(r, g, b);
+      sw.style.background = hex;
+    };
+
+    sw.appendChild(picker);
     wrap.appendChild(sw);
   }
 }
+

@@ -9,7 +9,7 @@
 function randomizePaletteWithConstraints() {
   gradients = [];
   colorMode(HSB, 360, 100, 100);
-
+	
   let bins = uiValues.hueBins;
   let binSize = 360 / bins;
   let out = [];
@@ -34,6 +34,21 @@ function randomizePaletteWithConstraints() {
   gradients = out;
   ensureFullPalette();
   colorMode(RGB, 255);
+updateBodyBackground(); // ← THÊM DÒNG NÀY
+
+}
+function updateBodyBackground() {
+  if (!window.gradients || gradients.length === 0) return;
+
+  const c = gradients[0];
+
+  const dark = `rgb(
+    ${Math.floor(c.levels[0] * 0.25)},
+    ${Math.floor(c.levels[1] * 0.25)},
+    ${Math.floor(c.levels[2] * 0.25)}
+  )`;
+
+  document.body.style.background = dark;
 }
 
 /* ==========================================================
@@ -171,5 +186,18 @@ function colorDistanceRGB(c1, c2) {
     (r1 - r2) * (r1 - r2) +
     (g1 - g2) * (g1 - g2) +
     (b1 - b2) * (b1 - b2)
+  );
+}
+function toHex2(v) {
+  let h = v.toString(16);
+  return h.length === 1 ? "0" + h : h;
+}
+
+function p5ColorToHex(c) {
+  return (
+    "#" +
+    toHex2(c.levels[0]) +
+    toHex2(c.levels[1]) +
+    toHex2(c.levels[2])
   );
 }
