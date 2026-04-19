@@ -20,6 +20,8 @@ function initGrid() {
 
 /* ==========================================================
    DRAW FIELD
+   FIX #1: Only use visibleGradients (gradientCount - 2)
+   to match what's shown in the palette preview UI.
 ========================================================== */
 function drawField() {
   fieldBuffer.clear();
@@ -38,16 +40,19 @@ function drawField() {
   let cellW = width / gridSizeX;
   let cellH = height / gridSizeY;
 
+  // FIX #1: slice to only visible colors (mirrors visibleCount in ui.js)
+  const visibleGradients = gradients.slice(0, Math.max(1, gradientCount - 2));
+
   for (let x = 0; x < gridSizeX; x++) {
     for (let y = 0; y < gridSizeY; y++) {
       let perl = grid[x][y].perl;
 
-      let gPos = perl * (gradients.length - 1);
+      let gPos = perl * (visibleGradients.length - 1);
       let idx = floor(gPos);
       let frac = gPos - idx;
 
-      let c1 = gradients[idx].levels;
-      let c2 = gradients[min(idx + 1, gradients.length - 1)].levels;
+      let c1 = visibleGradients[idx].levels;
+      let c2 = visibleGradients[min(idx + 1, visibleGradients.length - 1)].levels;
 
       // Nội suy màu thủ công để đạt tốc độ cao nhất
       let r = c1[0] + (c2[0] - c1[0]) * frac;
