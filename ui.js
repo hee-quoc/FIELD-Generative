@@ -185,89 +185,7 @@ function createUI() {
 
     wrap.appendChild(sl);
     panel.appendChild(wrap);
-    return sl; // return so callers can cross-link sliders
-  }
-
-  /* ================= HELP PANEL (inner fn) ================= */
-  function createHelpPanel() {
-    const hp = document.createElement("div");
-    hp.id = "fg-help";
-
-    Object.assign(hp.style, {
-      position: "fixed",
-      top: "0",
-      right: "0",
-      width: "300px",
-      height: "100vh",
-      padding: "16px",
-      boxSizing: "border-box",
-      background: "rgba(255,255,255)",
-      backdropFilter: "blur(12px)",
-      WebkitBackdropFilter: "blur(12px)",
-      borderLeft: "1px solid rgba(0,0,0)",
-      color: "#000",
-      overflowY: "auto",
-      zIndex: "99998",
-    });
-
-    hp.innerHTML = `
-      <div style="font-size:15px;font-weight:600;letter-spacing:0.4px;margin-bottom:12px;">
-        HOW TO USE
-      </div>
-
-      <div style="font-size:12px;line-height:1.55;opacity:0.75;">
-        <strong>PALETTE CONTROLS</strong><br><br>
-
-        • <b>Saturation</b><br>
-        Controls color intensity.<br>
-        Higher = stronger, more vivid colors.<br><br>
-
-        • <b>Brightness</b><br>
-        Controls overall lightness.<br>
-        Higher = brighter visuals.<br><br>
-
-        • <b>Hue Bins</b><br>
-        Number of distinct color groups sampled.<br>
-        Higher = more color variety.<br><br>
-
-        • <b>Sample Step</b><br>
-        Density of pixel sampling from your image.<br>
-        Lower = finer color detail captured.<br><br>
-
-        <strong>💡 HUE &amp; STEP GUIDE</strong><br><br>
-        For the cleanest results, match these two sliders:<br><br>
-        &nbsp;↑ <b>Hue high (8–12)</b> → use <b>Step high (6–10)</b><br>
-        &nbsp;&nbsp;&nbsp;More colors, broader sampling — avoids noise.<br><br>
-        &nbsp;↓ <b>Hue low (3–5)</b> → use <b>Step low (1–3)</b><br>
-        &nbsp;&nbsp;&nbsp;Fewer colors, fine sampling — sharp, minimal.<br><br>
-        Mismatching (high Hue + low Step) can produce<br>
-        muddy or overly busy visuals.<br><br>
-
-        <strong>APPLY vs SHUFFLE</strong><br><br>
-        • <b>APPLY</b> — Re-extracts a fresh set of colors<br>
-        from your image (or generates new random ones)<br>
-        using the current slider values. Best blends come<br>
-        from trying APPLY a few times.<br><br>
-        • <b>SHUFFLE</b> — Keeps the current colors but<br>
-        re-draws a new sample variation from the same<br>
-        image with a different random seed — gives you<br>
-        new picks without changing sliders.<br><br>
-
-        <strong>VIEW &amp; EXPORT</strong><br><br>
-        • <b>Export PNG</b> — Saves current frame.<br><br>
-        • <b>Start / Stop Recording</b> — Records a live<br>
-        WebM video. A <span style="color:#c00;font-weight:700">● REC</span> indicator appears<br>
-        while recording is active.<br><br>
-
-        <strong>RENDER NOTE</strong><br><br>
-        Video quality scales with your machine.<br>
-        For best results (≥ 80/100), use a modern GPU.<br>
-        Recording at a steady 30 fps canvas stream<br>
-        ensures smooth playback on most machines.
-      </div>
-    `;
-
-    document.body.appendChild(hp);
+    return sl;
   }
 
   /* ================= SLIDERS ================= */
@@ -275,8 +193,7 @@ function createUI() {
   addSlider("Saturation",   "minSaturation", 0, 100);
   addSlider("Brightness",   "brightness",    0, 100);
 
-  // Bug #5 — Hue and Step hint: show a small inline tip whenever
-  // the two values are mismatched, and auto-suggest the paired value.
+  /* ===== Hue/Step inline hint ===== */
   const hintEl = document.createElement("div");
   hintEl.id = "fg-hue-step-hint";
   Object.assign(hintEl.style, {
@@ -290,40 +207,23 @@ function createUI() {
     color: "#2255bb",
     display: "none",
   });
-  panel.appendChild(hintEl);
 
   function updateHueStepHint() {
     const hue  = uiValues.hueBins;
     const step = uiValues.sampleStep;
-
-    // Ideal: both in same band (low ≤5 | mid 6–8 | high ≥9)
     const hueBand  = hue  <= 5 ? 0 : hue  <= 8 ? 1 : 2;
     const stepBand = step <= 3 ? 0 : step <= 6 ? 1 : 2;
-
-    if (hueBand === stepBand) {
-      hintEl.style.display = "none";
-      return;
-    }
-
+    if (hueBand === stepBand) { hintEl.style.display = "none"; return; }
     hintEl.style.display = "block";
-
     if (hueBand > stepBand) {
-      // Hue high, step too low → muddy
-      const suggested = hue >= 9 ? "6–10" : "4–7";
-      hintEl.textContent =
-        `💡 Hue ${hue} is high — try Step ${suggested} for cleaner blends.`;
+      hintEl.textContent = `💡 Hue ${hue} is high — try Step ${hue >= 9 ? "6–10" : "4–7"} for cleaner blends.`;
     } else {
-      // Step high, hue too low → undersampled
-      const suggested = step >= 7 ? "7–12" : "5–8";
-      hintEl.textContent =
-        `💡 Step ${step} is high — try Hue Bins ${suggested} for richer color.`;
+      hintEl.textContent = `💡 Step ${step} is high — try Hue Bins ${step >= 7 ? "7–12" : "5–8"} for richer color.`;
     }
   }
 
   addSlider("Hue Bins",    "hueBins",    3, 12, 1, updateHueStepHint);
   addSlider("Sample Step", "sampleStep", 1, 10, 1, updateHueStepHint);
-
-  // Move hint below Sample Step (it was inserted before the sliders)
   panel.appendChild(hintEl);
   updateHueStepHint();
 
@@ -365,21 +265,17 @@ function createUI() {
   btnRow.appendChild(shuffleBtn);
 
   /* ================= APPLY LOGIC ================= */
-  // Bug #4 — APPLY: always re-extracts with current slider values,
-  // tries multiple blend candidates and picks the set with highest
-  // average pairwise color distance (most visually distinct palette).
   applyBtn.onclick = async () => {
     applyBtn.disabled = true;
     applyBtn.textContent = "…";
 
     if (img) {
-      // Run 3 extraction passes and keep the most varied palette
+      // Run 3 extraction passes, keep the most colour-diverse result
       const candidates = await Promise.all([
         extractPaletteFromImage(img, uiValues.sampleStep),
         extractPaletteFromImage(img, Math.max(1, uiValues.sampleStep - 1)),
         extractPaletteFromImage(img, Math.min(10, uiValues.sampleStep + 1)),
       ]);
-
       let best = candidates[0];
       let bestScore = _paletteDiversity(candidates[0]);
       for (let i = 1; i < candidates.length; i++) {
@@ -400,33 +296,21 @@ function createUI() {
   };
 
   /* ================= SHUFFLE LOGIC ================= */
-  // Bug #4 — SHUFFLE when image loaded: re-extracts a fresh sample
-  // with a slightly randomised step so it genuinely picks new colors
-  // rather than just reordering the existing ones.
-  shuffleBtn.onclick = async () => {
-    if (img) {
-      shuffleBtn.disabled = true;
-      shuffleBtn.textContent = "…";
+  // Bug #1 fix: SHUFFLE always reorders ONLY the current 5 visible
+  // colours (Fisher-Yates). It never re-extracts from the image —
+  // use APPLY for new colour sets.
+  shuffleBtn.onclick = () => {
+    const visN   = Math.max(0, gradientCount - 2); // 5 visible
+    const visible = gradients.slice(0, visN);
+    const hidden  = gradients.slice(visN);          // keep hidden tail
 
-      // Vary step randomly ±2 around current value for new picks
-      const baseStep = uiValues.sampleStep;
-      const jitter   = Math.floor(Math.random() * 5) - 2; // -2..+2
-      const step     = Math.max(1, Math.min(10, baseStep + jitter));
-
-      const pal = await extractPaletteFromImage(img, step);
-      gradients = pal.slice(0, gradientCount);
-      ensureFullPalette();
-
-      shuffleBtn.disabled = false;
-      shuffleBtn.textContent = "SHUFFLE";
-    } else {
-      // No image: shuffle existing order (original behaviour)
-      for (let i = gradients.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [gradients[i], gradients[j]] = [gradients[j], gradients[i]];
-      }
+    // Fisher-Yates shuffle on visible portion only
+    for (let i = visible.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [visible[i], visible[j]] = [visible[j], visible[i]];
     }
 
+    gradients = [...visible, ...hidden];
     updatePalettePreviewUI();
     updateBodyBackground();
   };
@@ -434,8 +318,6 @@ function createUI() {
 
 /* ==========================================================
    PALETTE DIVERSITY SCORE
-   Average pairwise RGB distance — higher = more varied palette.
-   Used by APPLY to pick the best of several extraction candidates.
 ========================================================== */
 function _paletteDiversity(pal) {
   if (!pal || pal.length < 2) return 0;
@@ -504,11 +386,11 @@ function updatePalettePreviewUI() {
 }
 
 /* ==========================================================
-   createHelpPanel — also callable at top-level (legacy call
-   in original main.js uses it outside createUI scope)
+   createHelpPanel — top-level so it's accessible from main.js
 ========================================================== */
 function createHelpPanel() {
-  if (document.getElementById("fg-help")) return; // already created
+  if (document.getElementById("fg-help")) return;
+
   const hp = document.createElement("div");
   hp.id = "fg-help";
   Object.assign(hp.style, {
@@ -527,10 +409,62 @@ function createHelpPanel() {
     overflowY: "auto",
     zIndex: "99998",
   });
+
   hp.innerHTML = `
-    <div style="font-size:15px;font-weight:600;letter-spacing:0.4px;margin-bottom:12px;">HOW TO USE</div>
-    <div style="font-size:12px;line-height:1.55;opacity:0.75;">
-      See panel for details.
-    </div>`;
+    <div style="font-size:15px;font-weight:600;letter-spacing:0.4px;margin-bottom:12px;">
+      HOW TO USE
+    </div>
+
+    <div style="font-size:12px;line-height:1.6;opacity:0.75;">
+      <strong>PALETTE CONTROLS</strong><br><br>
+
+      • <b>Saturation</b><br>
+      Color intensity. Higher = more vivid.<br><br>
+
+      • <b>Brightness</b><br>
+      Overall lightness. Higher = brighter.<br><br>
+
+      • <b>Hue Bins</b><br>
+      How many distinct color groups to sample.<br>
+      Higher = more color variety.<br><br>
+
+      • <b>Sample Step</b><br>
+      Pixel sampling density from image.<br>
+      Lower = finer detail captured.<br><br>
+
+      <strong>💡 HUE &amp; STEP GUIDE</strong><br><br>
+      Match these two for the cleanest result:<br><br>
+      ↑ <b>Hue 8–12</b> → <b>Step 6–10</b><br>
+      &nbsp;&nbsp;More colors, broad sampling.<br><br>
+      ↓ <b>Hue 3–5</b> → <b>Step 1–3</b><br>
+      &nbsp;&nbsp;Fewer colors, fine detail.<br><br>
+      Mismatched values can produce muddy blends.<br><br>
+
+      <strong>APPLY vs SHUFFLE</strong><br><br>
+      • <b>APPLY</b> — Re-extracts a new color set from<br>
+      your image using current slider values.<br><br>
+      • <b>SHUFFLE</b> — Reorders the current 5 colors<br>
+      to create a different gradient blend without<br>
+      changing which colors are in the palette.<br><br>
+
+      <strong>NAVIGATION</strong><br><br>
+      • <b>Scroll</b> on the visual to zoom in/out.<br>
+      • <b>Drag</b> the visual to pan.<br>
+      • Press <b>0</b> to reset view.<br>
+      • Scrolling over this panel or the left panel<br>
+      &nbsp;&nbsp;will NOT affect the visual zoom.<br><br>
+
+      <strong>VIEW &amp; EXPORT</strong><br><br>
+      • <b>Export PNG</b> — Saves current frame.<br><br>
+      • <b>⏺ Start Recording</b> — Records live WebM.<br>
+      &nbsp;&nbsp;A <span style="color:#c00;font-weight:700">● REC 00:00</span> timer appears while active.<br>
+      • <b>⏹ Stop &amp; Save</b> — Saves the recording.<br><br>
+
+      <strong>RENDER NOTE</strong><br><br>
+      Video quality scales with your machine.<br>
+      A modern GPU gives ≥ 80/100 quality at 30fps.<br>
+    </div>
+  `;
+
   document.body.appendChild(hp);
 }
