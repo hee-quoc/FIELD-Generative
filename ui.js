@@ -35,12 +35,12 @@ function createUI() {
     left: "0",
     width: "260px",
     height: "100vh",
-    background: "rgba(255,255,255,0.05)",
+    background: "rgba(255,255,255)",
     backdropFilter: "blur(12px)",
     WebkitBackdropFilter: "blur(12px)",
-    borderRight: "1px solid rgba(255,255,255,0.15)",
+    borderRight: "1px solid rgba(0,0,0)",
     padding: "14px",
-    color: "#eee",
+    color: "#000",
     overflowY: "auto",
     boxSizing: "border-box",
     zIndex: "99999",
@@ -64,7 +64,7 @@ function createUI() {
     borderRadius: "8px",
     marginTop: "8px",
     display: "none",
-    border: "1px solid rgba(255,255,255,0.2)"
+    border: "1px solid rgba(0,0,0)"
   });
   panel.appendChild(thumb);
   window.__FG_THUMB = thumb;
@@ -148,7 +148,7 @@ function createUI() {
       height: "6px",
       borderRadius: "6px",
       outline: "none",
-      border: "1px solid rgba(255,255,255,0.25)",
+      border: "1px solid rgba(0,0,0)",
       background: "rgba(255,255,255,0.10)",
       backdropFilter: "blur(6px)",
       WebkitBackdropFilter: "blur(6px)",
@@ -163,7 +163,7 @@ function createUI() {
         border-radius: 50%;
         background: rgba(255,255,255,0.95);
         box-shadow: 0 0 8px rgba(255,255,255,0.6);
-        border: 1px solid rgba(0,0,0,0.2);
+        border: 1px solid rgba(0,0,0);
       }
       input[type=range]::-moz-range-thumb {
         width: 14px;
@@ -171,7 +171,7 @@ function createUI() {
         border-radius: 50%;
         background: rgba(255,255,255,0.95);
         box-shadow: 0 0 8px rgba(255,255,255,0.6);
-        border: 1px solid rgba(0,0,0,0.2);
+        border: 1px solid rgba(0,0,0);
       }
     `;
     if (!window.__FG_SLIDER_STYLE) {
@@ -201,11 +201,11 @@ function createHelpPanel() {
     height: "100vh",
     padding: "16px",
     boxSizing: "border-box",
-    background: "rgba(0,0,0,0.35)",
+    background: "rgba(255,255,255)",
     backdropFilter: "blur(12px)",
     WebkitBackdropFilter: "blur(12px)",
-    borderLeft: "1px solid rgba(255,255,255,0.12)",
-    color: "#eee",
+    borderLeft: "1px solid rgba(0,0,0)",
+    color: "#000",
     overflowY: "auto",
     zIndex: "99998",
   });
@@ -292,11 +292,11 @@ Stronger hardware allows smoother motion and higher visual fidelity.
     flex: "1",
     padding: "10px 0",
     borderRadius: "6px",
-    border: "none",
+    border: "1px solid rgba(0,0,0)",
     cursor: "pointer",
     fontWeight: "600",
     background: "rgba(255,255,255,0.12)",
-    color: "#eee",
+    color: "#000",
   });
   btnRow.appendChild(shuffleBtn);
 
@@ -346,7 +346,7 @@ function updatePalettePreviewUI() {
       width: "32px",
       height: "32px",
       borderRadius: "4px",
-      border: "1px solid rgba(255,255,255,0.2)",
+      border: "1px solid rgba(0,0,0)",
       background: p5ColorToHex(c),
       cursor: "pointer",
       position: "relative",
@@ -365,7 +365,7 @@ function updatePalettePreviewUI() {
     });
 
     picker.onfocus = () => {
-      sw.style.outline = "2px solid #fff";
+      sw.style.outline = "2px solid #000";
     };
 
     picker.onblur = () => {
