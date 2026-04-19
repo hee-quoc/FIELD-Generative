@@ -3,6 +3,7 @@
    Grid • Draw • Noise • Camera
 ========================================================== */
 let noiseStride = 2;
+
 /* ==========================================================
    INIT GRID
 ========================================================== */
@@ -20,15 +21,13 @@ function initGrid() {
 
 /* ==========================================================
    DRAW FIELD
-   FIX #1: Only use visibleGradients (gradientCount - 2)
-   to match what's shown in the palette preview UI.
+   FIX (carried): only use visibleGradients (gradientCount - 2)
 ========================================================== */
 function drawField() {
   fieldBuffer.clear();
   fieldBuffer.background(0);
   fieldBuffer.noStroke();
 
-  // apply native canvas
   let ctx = fieldBuffer.drawingContext;
 
   fieldBuffer.push();
@@ -40,7 +39,6 @@ function drawField() {
   let cellW = width / gridSizeX;
   let cellH = height / gridSizeY;
 
-  // FIX #1: slice to only visible colors (mirrors visibleCount in ui.js)
   const visibleGradients = gradients.slice(0, Math.max(1, gradientCount - 2));
 
   for (let x = 0; x < gridSizeX; x++) {
@@ -48,29 +46,25 @@ function drawField() {
       let perl = grid[x][y].perl;
 
       let gPos = perl * (visibleGradients.length - 1);
-      let idx = floor(gPos);
+      let idx  = floor(gPos);
       let frac = gPos - idx;
 
       let c1 = visibleGradients[idx].levels;
       let c2 = visibleGradients[min(idx + 1, visibleGradients.length - 1)].levels;
 
-      // Nội suy màu thủ công để đạt tốc độ cao nhất
       let r = c1[0] + (c2[0] - c1[0]) * frac;
       let g = c1[1] + (c2[1] - c1[1]) * frac;
       let b = c1[2] + (c2[2] - c1[2]) * frac;
 
-      // native fills (bỏ qua lerpColor và fill của p5 cho 110,000 ô)
       ctx.fillStyle = `rgb(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)})`;
 
       let px = cellW * (x + 0.5);
       let py = cellH * (y + 0.5);
-      let w = max(cellW + 1.4, baseElementSize * scaleFactor);
-      let h = max(cellH + 1.4, baseElementSize * scaleFactor);
+      let w  = max(cellW + 1.4, baseElementSize * scaleFactor);
+      let h  = max(cellH + 1.4, baseElementSize * scaleFactor);
 
-      // fillRect vẽ nhanh hơn rect() của p5 rất nhiều
-      ctx.fillRect(px - w/2, py - h/2, w, h);
+      ctx.fillRect(px - w / 2, py - h / 2, w, h);
 
-      // update noise (Throttled update)
       if ((x + y + frameCount) % noiseStride === 0) {
         grid[x][y].perl =
           noise(x * noiseScale + t, y * noiseScale + t) * 0.6 +
@@ -81,15 +75,13 @@ function drawField() {
 
   fieldBuffer.pop();
 
-  // Draw + Blur dùng Native filter (Gia tốc phần cứng)
   clear();
   if (blurAmount > 0) {
     drawingContext.filter = `blur(${blurAmount}px)`;
   }
   image(fieldBuffer, 0, 0);
-  drawingContext.filter = 'none';
+  drawingContext.filter = "none";
 }
-
 
 /* ==========================================================
    DRAW GRID PIXEL
@@ -97,10 +89,8 @@ function drawField() {
 function drawGridPixel(x, y, cellW, cellH) {
   let px = cellW * (x + 0.5);
   let py = cellH * (y + 0.5);
-
-  let w = max(cellW + 1.4, baseElementSize * scaleFactor);
-  let h = max(cellH + 1.4, baseElementSize * scaleFactor);
-
+  let w  = max(cellW + 1.4, baseElementSize * scaleFactor);
+  let h  = max(cellH + 1.4, baseElementSize * scaleFactor);
   rect(px, py, w, h);
 }
 
@@ -117,9 +107,35 @@ function drawHUD() {
 }
 
 /* ==========================================================
+   HELPERS — panel hit-test
+   Returns true when the pointer is currently inside any
+   fixed UI panel so wheel / drag events can be suppressed.
+========================================================== */
+function _cursorOverPanel() {
+  const ids = ["fg-ui", "fg-help"];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const r = el.getBoundingClientRect();
+    if (
+      mouseX >= r.left && mouseX <= r.right &&
+      mouseY >= r.top  && mouseY <= r.bottom
+    ) return true;
+  }
+  return false;
+}
+
+/* ==========================================================
    ZOOM / PAN
+   FIX Bug #2 — ignore wheel/drag when cursor is over a panel
+   so scrolling the slider list never zooms the visual.
 ========================================================== */
 function mouseWheel(ev) {
+  if (_cursorOverPanel()) {
+    // Let the browser handle native panel scrolling
+    return;
+  }
+
   let newScale = scaleFactor - ev.delta * 0.0004;
   newScale = constrain(newScale, minScale, maxScale);
 
@@ -130,11 +146,11 @@ function mouseWheel(ev) {
   offsetY = mouseY - worldY * newScale;
 
   scaleFactor = newScale;
-  return false;
+  return false; // prevent page scroll only while actually zooming
 }
 
 function mousePressed() {
-  if (mouseX < 260) return;
+  if (_cursorOverPanel()) return;
   isDragging = true;
   lastMouseX = mouseX;
   lastMouseY = mouseY;
@@ -154,8 +170,8 @@ function mouseReleased() {
 
 function keyPressed() {
   if (key === "0") {
-    offsetX = 0;
-    offsetY = 0;
+    offsetX     = 0;
+    offsetY     = 0;
     scaleFactor = 1.0;
   }
 }
