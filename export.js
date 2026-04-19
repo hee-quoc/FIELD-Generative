@@ -1306,8 +1306,8 @@ function _showRecUI(visible) {
      REC_FPS          — output framerate (30 is safe for all browsers)
      REC_DURATION_SEC — how many seconds to record
 ========================================================== */
-const REC_FPS          = 5;
-const REC_DURATION_SEC = 5;
+const REC_FPS          = 6;
+const REC_DURATION_SEC = 6;
 
 let isRecording = false;
 let _recAbort   = false;
