@@ -23,9 +23,16 @@ let speed = 4;
 // =====================
 // CAMERA
 // =====================
-let scaleFactor = 3.0;
-let offsetX   = 0;
-let offsetY   = 0;
+const INITIAL_CAMERA = {
+  scaleFactor: 3.0,
+  offsetX: 0,
+  offsetY: 0,
+};
+
+let scaleFactor = INITIAL_CAMERA.scaleFactor;
+let offsetX     = INITIAL_CAMERA.offsetX;
+let offsetY     = INITIAL_CAMERA.offsetY;
+
 let minScale  = 0.1;
 let maxScale  = 3.0;
 let isDragging  = false;
@@ -48,6 +55,15 @@ let uiValues = {
   hueBins:       6,
   sampleStep:    4,
 };
+
+/* ==========================================================
+   CAMERA HELPERS
+========================================================== */
+function resetCameraToInitial() {
+  offsetX     = INITIAL_CAMERA.offsetX;
+  offsetY     = INITIAL_CAMERA.offsetY;
+  scaleFactor = INITIAL_CAMERA.scaleFactor;
+}
 
 /* ==========================================================
    SETUP
