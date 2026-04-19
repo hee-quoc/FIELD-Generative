@@ -3,20 +3,13 @@
    Global State + p5 Lifecycle
 ========================================================== */
 
-// =====================
-// GRID & NOISE
-// =====================
-// =====================
-// RENDER MODE (OFFLINE)
-// =====================
-let renderMode = false;
+let renderMode  = false;
 let renderFrame = 0;
-
-let RENDER_FPS = 60;
-let TOTAL_FRAMES = 600; // 10s video
+let RENDER_FPS    = 60;
+let TOTAL_FRAMES  = 600; // 10s video
 
 let grid = [];
-let gridResolution = 3;
+let gridResolution  = 3;
 let gridSizeX;
 let gridSizeY;
 let baseElementSize = gridResolution;
@@ -24,25 +17,25 @@ let fieldBuffer;
 let blurAmount = 20;
 let bgColor;
 let noiseScale = 0.002;
-let t = 5;
+let t     = 5;
 let speed = 4;
 
 // =====================
 // CAMERA
 // =====================
 let scaleFactor = 3.0;
-let offsetX = 0;
-let offsetY = 0;
-let minScale = 0.1;
-let maxScale = 3.0;
-let isDragging = false;
-let lastMouseX = 0;
-let lastMouseY = 0;
+let offsetX   = 0;
+let offsetY   = 0;
+let minScale  = 0.1;
+let maxScale  = 3.0;
+let isDragging  = false;
+let lastMouseX  = 0;
+let lastMouseY  = 0;
 
 // =====================
 // PALETTE
 // =====================
-let gradients = [];
+let gradients     = [];
 let gradientCount = 7;
 let img = null;
 
@@ -51,9 +44,9 @@ let img = null;
 // =====================
 let uiValues = {
   minSaturation: 80,
-  brightness: 100,
-  hueBins: 6,
-  sampleStep: 4,
+  brightness:    100,
+  hueBins:       6,
+  sampleStep:    4,
 };
 
 /* ==========================================================
@@ -62,11 +55,10 @@ let uiValues = {
 function centerCanvas() {
   const c = document.querySelector("canvas");
   if (!c) return;
-
   Object.assign(c.style, {
     position: "fixed",
     left: "50%",
-    top: "50%",
+    top:  "50%",
     transform: "translate(-50%, -50%)",
   });
 }
@@ -74,54 +66,42 @@ function centerCanvas() {
 function setup() {
   let s = min(windowWidth, windowHeight);
   createCanvas(s, s);
-
   centerCanvas();
 
   frameRate(5);
   rectMode(CENTER);
   colorMode(RGB, 255);
 
-  // Grid sizing
-  gridSizeX = floor(width / gridResolution);
-  gridSizeY = floor(height / gridResolution);
+  gridSizeX       = floor(width  / gridResolution);
+  gridSizeY       = floor(height / gridResolution);
   baseElementSize = gridResolution;
-
-  // Noise scale auto follow resolution
-  noiseScale = gridResolution * 0.004;
+  noiseScale      = gridResolution * 0.004;
 
   fieldBuffer = createGraphics(width, height);
   fieldBuffer.pixelDensity(1);
 
-  // Init palette
-  randomizePaletteWithConstraints();
-  ensureFullPalette();
+  // ── Default palette: #ff1900 → #ffe229 → #d3ff75 → #8fd100 → #ffffff
+  gradients = getDefaultPalette();
   updateBodyBackground();
 
-  // Init grid
   initGrid();
 
-  // Init UI & Export tools
-  setTimeout(createUI, 200);
-  setTimeout(addExportButtons, 400);
-
-  // Bug #3 fix: install the DOM-level wheel lock AFTER panels exist
-  // so getBoundingClientRect() can find #fg-ui and #fg-help.
-  setTimeout(_installWheelLock, 600);
+  setTimeout(createUI,           200);
+  setTimeout(addExportButtons,   400);
+  // DOM-level wheel lock — must run AFTER panels are in the DOM
+  setTimeout(_installWheelLock,  600);
 }
 
 function updateBodyBackground() {
   if (!gradients || gradients.length < 2) return;
-
   const c1 = gradients[0];
   const c2 = gradients[1] || gradients[0];
-
   document.body.style.background = `
     radial-gradient(
       circle at center,
       rgba(${c1.levels[0]}, ${c1.levels[1]}, ${c1.levels[2]}, 0.35),
-      rgba(${c2.levels[0] * 0.2}, ${c2.levels[1] * 0.2}, ${c2.levels[2] * 0.2}, 1)
-    )
-  `;
+      rgba(${Math.floor(c2.levels[0]*0.2)}, ${Math.floor(c2.levels[1]*0.2)}, ${Math.floor(c2.levels[2]*0.2)}, 1)
+    )`;
 }
 
 /* ==========================================================
@@ -130,23 +110,18 @@ function updateBodyBackground() {
 function draw() {
   drawField();
 
-  // ===== OFFLINE RENDER MODE =====
   if (renderMode) {
     t += 0.02 * speed;
-
     saveCanvas(`frame_${nf(renderFrame, 4)}`, "png");
     renderFrame++;
-
     if (renderFrame >= TOTAL_FRAMES) {
       renderMode = false;
       console.log("Render finished");
       noLoop();
     }
-
     return;
   }
 
-  // ===== REALTIME MODE =====
   t += 0.02 * speed;
 }
 
