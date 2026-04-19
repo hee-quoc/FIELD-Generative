@@ -800,7 +800,7 @@ function addExportButtons() {
      VIEW A  "Overview"  — scaleFactor = OVERVIEW_SCALE, offset centred
      VIEW B  "Detail"    — INITIAL_CAMERA (scaleFactor 3.0)
   ================================================================= */
-  const OVERVIEW_SCALE = 0.5;
+  const OVERVIEW_SCALE = 1.0;
   let _activeView = "detail";
 
   const viewToggleBtn = makeBtn(panel, "⊞  Overview");
