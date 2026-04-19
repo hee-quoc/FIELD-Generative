@@ -27,12 +27,85 @@ function addExportButtons() {
   });
   panel.appendChild(exportTitle);
 
-  /* ===== RESET VIEW BUTTON ===== */
-  const resetBtn = makeBtn(panel, "Wide View");
-  resetBtn.onclick = () => {
-    offsetX = 0;
-    offsetY = 0;
-    scaleFactor = 1.0;
+  /* =================================================================
+     VIEW TOGGLE BUTTON
+     Two fixed presets — no dependency on where the user has panned:
+
+       VIEW A  "Overview"  — zoomed-out wide view
+                             scaleFactor = 1.0, offset centred
+                             change OVERVIEW_SCALE below to taste
+
+       VIEW B  "Detail"    — the original startup close-up
+                             scaleFactor = INITIAL_CAMERA.scaleFactor (3.0)
+                             defined in main.js INITIAL_CAMERA
+
+     Button label always shows where the NEXT click will take you.
+  ================================================================= */
+  const OVERVIEW_SCALE = 0.5; // wide view — change this number to taste
+
+  let _activeView = "detail"; // tracks which preset is currently shown
+
+  const viewToggleBtn = makeBtn(panel, "⊞  Overview");
+  viewToggleBtn.id = "fg-view-toggle-btn";
+
+  viewToggleBtn.onclick = () => {
+    if (_activeView === "detail") {
+      offsetX     = 0;
+      offsetY     = 0;
+      scaleFactor = OVERVIEW_SCALE;
+      _activeView = "overview";
+      viewToggleBtn.textContent = "⊡  Detail View";
+    } else {
+      offsetX     = INITIAL_CAMERA.offsetX;
+      offsetY     = INITIAL_CAMERA.offsetY;
+      scaleFactor = INITIAL_CAMERA.scaleFactor;
+      _activeView = "detail";
+      viewToggleBtn.textContent = "⊞  Overview";
+    }
+  };
+
+  /* =================================================================
+     FULL SYSTEM RESET BUTTON
+     Returns everything to exact first-load state:
+       Camera  → INITIAL_CAMERA
+       Palette → default (#ff1900 → #ffffff)
+       Noise   → t = 5, speed = 4
+       View toggle → back to "detail"
+  ================================================================= */
+  const sysResetBtn = makeBtn(panel, "↺  Reset System");
+  sysResetBtn.id = "fg-sys-reset-btn";
+  Object.assign(sysResetBtn.style, {
+    marginTop: "12px",
+    borderColor: "rgba(180,0,0,0.35)",
+    color: "#900",
+  });
+
+  sysResetBtn.onclick = () => {
+    // 1. Camera
+    offsetX     = INITIAL_CAMERA.offsetX;
+    offsetY     = INITIAL_CAMERA.offsetY;
+    scaleFactor = INITIAL_CAMERA.scaleFactor;
+
+    // 2. Palette → default (#ff1900 → #ffffff)
+    if (typeof getDefaultPalette === "function")      gradients = getDefaultPalette();
+    if (typeof ensureFullPalette === "function")      ensureFullPalette();
+    if (typeof updatePalettePreviewUI === "function") updatePalettePreviewUI();
+    if (typeof updateBodyBackground === "function")   updateBodyBackground();
+
+    // 3. Clear uploaded image + thumbnail
+    img = null;
+    const fileInput = document.querySelector("#fg-ui input[type=file]");
+    if (fileInput) fileInput.value = "";
+    const thumb = window.__FG_THUMB;
+    if (thumb) { thumb.src = ""; thumb.style.display = "none"; }
+
+    // 4. Sync view-toggle state
+    _activeView = "detail";
+    viewToggleBtn.textContent = "⊞  Overview";
+
+    // 5. Flash to confirm
+    sysResetBtn.textContent = "✓  Done";
+    setTimeout(() => { sysResetBtn.textContent = "↺  Reset System"; }, 1200);
   };
 
   /* ===== PNG CAPTURE MODE ===== */
