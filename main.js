@@ -21,11 +21,11 @@ let gridSizeX;
 let gridSizeY;
 let baseElementSize = gridResolution;
 let fieldBuffer;
-let blurAmount = 20; // khách muốn blur
+let blurAmount = 20;
 let bgColor;
 let noiseScale = 0.002;
 let t = 5;
-let speed = 4; // khách muốn nhanh hơn
+let speed = 4;
 
 // =====================
 // CAMERA
@@ -56,11 +56,6 @@ let uiValues = {
   sampleStep: 4,
 };
 
-// =====================
-// CCAPTURE LOADER
-// =====================
-
-
 /* ==========================================================
    SETUP
 ========================================================== */
@@ -75,16 +70,17 @@ function centerCanvas() {
     transform: "translate(-50%, -50%)",
   });
 }
+
 function setup() {
   let s = min(windowWidth, windowHeight);
   createCanvas(s, s);
 
-  centerCanvas(); // ← QUAN TRỌNG
+  centerCanvas();
 
   frameRate(5);
   rectMode(CENTER);
   colorMode(RGB, 255);
-  
+
   // Grid sizing
   gridSizeX = floor(width / gridResolution);
   gridSizeY = floor(height / gridResolution);
@@ -93,14 +89,13 @@ function setup() {
   // Noise scale auto follow resolution
   noiseScale = gridResolution * 0.004;
 
-	fieldBuffer = createGraphics(width, height);
-fieldBuffer.pixelDensity(1);
+  fieldBuffer = createGraphics(width, height);
+  fieldBuffer.pixelDensity(1);
 
-	
   // Init palette
-randomizePaletteWithConstraints();
-ensureFullPalette();
-updateBodyBackground();
+  randomizePaletteWithConstraints();
+  ensureFullPalette();
+  updateBodyBackground();
 
   // Init grid
   initGrid();
@@ -108,7 +103,12 @@ updateBodyBackground();
   // Init UI & Export tools
   setTimeout(createUI, 200);
   setTimeout(addExportButtons, 400);
+
+  // Bug #3 fix: install the DOM-level wheel lock AFTER panels exist
+  // so getBoundingClientRect() can find #fg-ui and #fg-help.
+  setTimeout(_installWheelLock, 600);
 }
+
 function updateBodyBackground() {
   if (!gradients || gradients.length < 2) return;
 
@@ -123,6 +123,7 @@ function updateBodyBackground() {
     )
   `;
 }
+
 /* ==========================================================
    DRAW LOOP
 ========================================================== */
@@ -131,7 +132,6 @@ function draw() {
 
   // ===== OFFLINE RENDER MODE =====
   if (renderMode) {
-    // tăng time theo frame, KHÔNG phụ thuộc realtime
     t += 0.02 * speed;
 
     saveCanvas(`frame_${nf(renderFrame, 4)}`, "png");
@@ -140,15 +140,16 @@ function draw() {
     if (renderFrame >= TOTAL_FRAMES) {
       renderMode = false;
       console.log("Render finished");
-      noLoop(); // dừng draw khi render xong
+      noLoop();
     }
 
-    return; // ⛔ cực quan trọng
+    return;
   }
 
   // ===== REALTIME MODE =====
   t += 0.02 * speed;
 }
+
 /* ==========================================================
    RESIZE
 ========================================================== */
