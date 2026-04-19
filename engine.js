@@ -20,8 +20,90 @@ function initGrid() {
 }
 
 /* ==========================================================
+   NOISE → COLOR INDEX REMAPPING
+   
+   Bug #2 fix: p5 noise() clusters ~70% of values in 0.3–0.7,
+   so colours at index 0 (min) and index 4 (max) rarely appear.
+   
+   We apply a symmetric S-curve (smoothstep-based) that pulls
+   values toward the extremes, giving colours 1 and 5 equal
+   screen coverage as the middle ones.
+   
+   Input:  perl ∈ [0, 1]   (raw noise value)
+   Output: remapped ∈ [0, 1] with boosted extremes
+========================================================== */
+function _remapNoise(v) {
+  // Fold around 0.5, apply a cubic ease that pushes values outward,
+  // then unfold. Strength controls how aggressively we spread.
+  const strength = 2.2; // 1 = no remap, higher = more extreme spread
+  let x = v * 2.0 - 1.0;          // [-1, 1]
+  // sign-preserving power: spreads both ends equally
+  x = Math.sign(x) * Math.pow(Math.abs(x), 1.0 / strength);
+  return x * 0.5 + 0.5;           // back to [0, 1]
+}
+
+/* ==========================================================
+   WHEEL LOCK — DOM-level fix for Bug #3
+   
+   p5's mouseX/mouseY are canvas-relative and do NOT match
+   viewport coordinates when the canvas is CSS-transformed
+   (centered with translate(-50%,-50%)).
+   Using getBoundingClientRect() with the raw DOM event's
+   clientX/clientY is the only reliable approach.
+   
+   We attach a native 'wheel' listener to the canvas that
+   checks the real pointer position against the panel rects
+   and calls preventDefault() to kill zoom only when the
+   pointer is truly over the visual area.
+========================================================== */
+function _installWheelLock() {
+  // Run after DOM is ready (called from setup via setTimeout)
+  const canvas = document.querySelector("canvas");
+  if (!canvas) return;
+
+  canvas.addEventListener("wheel", function(ev) {
+    // Use real viewport coordinates from the DOM event
+    const cx = ev.clientX;
+    const cy = ev.clientY;
+
+    const leftPanel  = document.getElementById("fg-ui");
+    const rightPanel = document.getElementById("fg-help");
+
+    function hitEl(el) {
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      return cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom;
+    }
+
+    if (hitEl(leftPanel) || hitEl(rightPanel)) {
+      // Cursor is over a UI panel — do NOT zoom, let panel scroll
+      ev.stopPropagation();
+      return;
+    }
+
+    // Cursor over canvas — zoom and block page scroll
+    ev.preventDefault();
+
+    let newScale = scaleFactor - ev.deltaY * 0.0004;
+    newScale = Math.min(Math.max(newScale, minScale), maxScale);
+
+    // Zoom toward the cursor position in canvas space
+    const cr = canvas.getBoundingClientRect();
+    const relX = cx - cr.left;
+    const relY = cy - cr.top;
+
+    const worldX = (relX - offsetX) / scaleFactor;
+    const worldY = (relY - offsetY) / scaleFactor;
+
+    offsetX = relX - worldX * newScale;
+    offsetY = relY - worldY * newScale;
+
+    scaleFactor = newScale;
+  }, { passive: false }); // passive:false required for preventDefault
+}
+
+/* ==========================================================
    DRAW FIELD
-   FIX (carried): only use visibleGradients (gradientCount - 2)
 ========================================================== */
 function drawField() {
   fieldBuffer.clear();
@@ -39,18 +121,24 @@ function drawField() {
   let cellW = width / gridSizeX;
   let cellH = height / gridSizeY;
 
+  // Only render the visible slice (gradientCount - 2)
   const visibleGradients = gradients.slice(0, Math.max(1, gradientCount - 2));
+  const vLen = visibleGradients.length;
 
   for (let x = 0; x < gridSizeX; x++) {
     for (let y = 0; y < gridSizeY; y++) {
       let perl = grid[x][y].perl;
 
-      let gPos = perl * (visibleGradients.length - 1);
-      let idx  = floor(gPos);
+      // Bug #2 fix: remap so extremes (colour 1 & 5) appear as often
+      // as middle colours instead of being squeezed out by noise clustering
+      let mapped = _remapNoise(perl);
+
+      let gPos = mapped * (vLen - 1);
+      let idx  = Math.floor(gPos);
       let frac = gPos - idx;
 
       let c1 = visibleGradients[idx].levels;
-      let c2 = visibleGradients[min(idx + 1, visibleGradients.length - 1)].levels;
+      let c2 = visibleGradients[Math.min(idx + 1, vLen - 1)].levels;
 
       let r = c1[0] + (c2[0] - c1[0]) * frac;
       let g = c1[1] + (c2[1] - c1[1]) * frac;
@@ -107,50 +195,32 @@ function drawHUD() {
 }
 
 /* ==========================================================
-   HELPERS — panel hit-test
-   Returns true when the pointer is currently inside any
-   fixed UI panel so wheel / drag events can be suppressed.
-========================================================== */
-function _cursorOverPanel() {
-  const ids = ["fg-ui", "fg-help"];
-  for (const id of ids) {
-    const el = document.getElementById(id);
-    if (!el) continue;
-    const r = el.getBoundingClientRect();
-    if (
-      mouseX >= r.left && mouseX <= r.right &&
-      mouseY >= r.top  && mouseY <= r.bottom
-    ) return true;
-  }
-  return false;
-}
-
-/* ==========================================================
-   ZOOM / PAN
-   FIX Bug #2 — ignore wheel/drag when cursor is over a panel
-   so scrolling the slider list never zooms the visual.
+   ZOOM / PAN — p5 callbacks
+   
+   mouseWheel: now a no-op for zoom because _installWheelLock()
+   handles zoom via the native DOM listener with correct coords.
+   We keep it here only to return false (suppress p5's default
+   page-scroll behavior) when the cursor is on the canvas.
 ========================================================== */
 function mouseWheel(ev) {
-  if (_cursorOverPanel()) {
-    // Let the browser handle native panel scrolling
-    return;
-  }
-
-  let newScale = scaleFactor - ev.delta * 0.0004;
-  newScale = constrain(newScale, minScale, maxScale);
-
-  let worldX = (mouseX - offsetX) / scaleFactor;
-  let worldY = (mouseY - offsetY) / scaleFactor;
-
-  offsetX = mouseX - worldX * newScale;
-  offsetY = mouseY - worldY * newScale;
-
-  scaleFactor = newScale;
-  return false; // prevent page scroll only while actually zooming
+  // Native DOM listener in _installWheelLock handles everything.
+  // Return without action — zoom is done there.
+  // Returning undefined (not false) lets the DOM listener's
+  // preventDefault/stopPropagation control scrolling correctly.
 }
 
 function mousePressed() {
-  if (_cursorOverPanel()) return;
+  // Use raw DOM clientX/Y for panel check (same reason as wheel)
+  const ev = window.event;
+  if (ev) {
+    const cx = ev.clientX, cy = ev.clientY;
+    for (const id of ["fg-ui", "fg-help"]) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) return;
+    }
+  }
   isDragging = true;
   lastMouseX = mouseX;
   lastMouseY = mouseY;
