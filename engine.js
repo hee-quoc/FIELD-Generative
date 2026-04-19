@@ -21,48 +21,22 @@ function initGrid() {
 
 /* ==========================================================
    NOISE → COLOR INDEX REMAPPING
-   
-   Bug #2 fix: p5 noise() clusters ~70% of values in 0.3–0.7,
-   so colours at index 0 (min) and index 4 (max) rarely appear.
-   
-   We apply a symmetric S-curve (smoothstep-based) that pulls
-   values toward the extremes, giving colours 1 and 5 equal
-   screen coverage as the middle ones.
-   
-   Input:  perl ∈ [0, 1]   (raw noise value)
-   Output: remapped ∈ [0, 1] with boosted extremes
 ========================================================== */
 function _remapNoise(v) {
-  // Fold around 0.5, apply a cubic ease that pushes values outward,
-  // then unfold. Strength controls how aggressively we spread.
-  const strength = 2.2; // 1 = no remap, higher = more extreme spread
-  let x = v * 2.0 - 1.0;          // [-1, 1]
-  // sign-preserving power: spreads both ends equally
+  const strength = 2.2;
+  let x = v * 2.0 - 1.0;
   x = Math.sign(x) * Math.pow(Math.abs(x), 1.0 / strength);
-  return x * 0.5 + 0.5;           // back to [0, 1]
+  return x * 0.5 + 0.5;
 }
 
 /* ==========================================================
-   WHEEL LOCK — DOM-level fix for Bug #3
-   
-   p5's mouseX/mouseY are canvas-relative and do NOT match
-   viewport coordinates when the canvas is CSS-transformed
-   (centered with translate(-50%,-50%)).
-   Using getBoundingClientRect() with the raw DOM event's
-   clientX/clientY is the only reliable approach.
-   
-   We attach a native 'wheel' listener to the canvas that
-   checks the real pointer position against the panel rects
-   and calls preventDefault() to kill zoom only when the
-   pointer is truly over the visual area.
+   WHEEL LOCK — DOM-level fix
 ========================================================== */
 function _installWheelLock() {
-  // Run after DOM is ready (called from setup via setTimeout)
   const canvas = document.querySelector("canvas");
   if (!canvas) return;
 
   canvas.addEventListener("wheel", function(ev) {
-    // Use real viewport coordinates from the DOM event
     const cx = ev.clientX;
     const cy = ev.clientY;
 
@@ -76,18 +50,15 @@ function _installWheelLock() {
     }
 
     if (hitEl(leftPanel) || hitEl(rightPanel)) {
-      // Cursor is over a UI panel — do NOT zoom, let panel scroll
       ev.stopPropagation();
       return;
     }
 
-    // Cursor over canvas — zoom and block page scroll
     ev.preventDefault();
 
     let newScale = scaleFactor - ev.deltaY * 0.0004;
     newScale = Math.min(Math.max(newScale, minScale), maxScale);
 
-    // Zoom toward the cursor position in canvas space
     const cr = canvas.getBoundingClientRect();
     const relX = cx - cr.left;
     const relY = cy - cr.top;
@@ -99,7 +70,27 @@ function _installWheelLock() {
     offsetY = relY - worldY * newScale;
 
     scaleFactor = newScale;
-  }, { passive: false }); // passive:false required for preventDefault
+  }, { passive: false });
+
+  /* ── Global keyboard handler (fires even when sliders have focus) ── */
+  if (!window.__FG_ENGINE_KEYBOUND) {
+    window.addEventListener("keydown", function(ev) {
+      const tag = (ev.target && ev.target.tagName) ? ev.target.tagName.toLowerCase() : "";
+      const isTyping =
+        tag === "input" ||
+        tag === "textarea" ||
+        (ev.target && ev.target.isContentEditable);
+
+      /* Quick-capture shortcut: press C any time to capture PNG */
+      if ((ev.key === "c" || ev.key === "C") && !isTyping) {
+        if (typeof capturePNGNow === "function") {
+          capturePNGNow();
+        }
+        return;
+      }
+    });
+    window.__FG_ENGINE_KEYBOUND = true;
+  }
 }
 
 /* ==========================================================
@@ -121,7 +112,6 @@ function drawField() {
   let cellW = width / gridSizeX;
   let cellH = height / gridSizeY;
 
-  // Only render the visible slice (gradientCount - 2)
   const visibleGradients = gradients.slice(0, Math.max(1, gradientCount - 2));
   const vLen = visibleGradients.length;
 
@@ -129,8 +119,6 @@ function drawField() {
     for (let y = 0; y < gridSizeY; y++) {
       let perl = grid[x][y].perl;
 
-      // Bug #2 fix: remap so extremes (colour 1 & 5) appear as often
-      // as middle colours instead of being squeezed out by noise clustering
       let mapped = _remapNoise(perl);
 
       let gPos = mapped * (vLen - 1);
@@ -184,33 +172,27 @@ function drawGridPixel(x, y, cellW, cellH) {
 
 /* ==========================================================
    HUD
+   FIX: removed "Reset: 0 / Button" — shortcut was unreliable
+        when DOM inputs held focus. Use the Reset View button
+        on the left panel instead.
 ========================================================== */
 function drawHUD() {
   push();
   fill(255, 180);
   textAlign(RIGHT, BOTTOM);
   textSize(12);
-  text(`Zoom: Scroll  |  Pan: Drag  |  Reset: 0`, width - 14, height - 14);
+  text(`Zoom: Scroll  |  Pan: Drag  |  Reset: Button (panel)  |  Capture PNG: C`, width - 14, height - 14);
   pop();
 }
 
 /* ==========================================================
    ZOOM / PAN — p5 callbacks
-   
-   mouseWheel: now a no-op for zoom because _installWheelLock()
-   handles zoom via the native DOM listener with correct coords.
-   We keep it here only to return false (suppress p5's default
-   page-scroll behavior) when the cursor is on the canvas.
 ========================================================== */
 function mouseWheel(ev) {
   // Native DOM listener in _installWheelLock handles everything.
-  // Return without action — zoom is done there.
-  // Returning undefined (not false) lets the DOM listener's
-  // preventDefault/stopPropagation control scrolling correctly.
 }
 
 function mousePressed() {
-  // Use raw DOM clientX/Y for panel check (same reason as wheel)
   const ev = window.event;
   if (ev) {
     const cx = ev.clientX, cy = ev.clientY;
@@ -239,9 +221,7 @@ function mouseReleased() {
 }
 
 function keyPressed() {
-  if (key === "0") {
-    offsetX     = 0;
-    offsetY     = 0;
-    scaleFactor = 1.0;
-  }
+  // Intentionally empty — all keyboard logic moved to
+  // window.addEventListener("keydown") inside _installWheelLock
+  // so shortcuts fire even when DOM inputs hold focus.
 }
