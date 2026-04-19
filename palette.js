@@ -25,11 +25,11 @@
 function getDefaultPalette() {
   colorMode(RGB, 255);
   const p = [
-    color(255, 25,   0),   // 1  #ff1900  — anchor red, luma 21%
-    color(255, 226, 41),   // 2  #ffe229  — warm yellow, luma 83%
-    color(211, 255, 117),  // 3  #d3ff75  — lime, luma 91%
-    color(143, 209,  0),   // 4  #8fd100  — olive green, luma 65%
-    color(255, 255, 255),  // 5  #ffffff  — white highlight
+    color(45, 255,   176),   // 1  #ff1900  — anchor red, luma 21%
+    color(26, 91, 63),   // 2  #ffe229  — warm yellow, luma 83%
+    color(204, 124, 29),  // 3  #d3ff75  — lime, luma 91%
+    color(242, 233,  215),   // 4  #8fd100  — olive green, luma 65%
+    color(57, 181, 131),  // 5  #ffffff  — white highlight
     color( 80,  10,  0),   // 6  structural dark (hidden)
     color( 50,  70,  0),   // 7  structural dark (hidden)
   ];
