@@ -46,8 +46,7 @@ function createUI() {
     zIndex: "99999",
   });
   document.body.appendChild(panel);
-	createHelpPanel();
-
+  createHelpPanel();
 
   /* ================= HEADER ================= */
   const header = document.createElement("div");
@@ -109,7 +108,7 @@ function createUI() {
   panel.appendChild(paletteWrap);
   window.__FG_PALETTE_WRAP = paletteWrap;
   updatePalettePreviewUI();
-	updateBodyBackground();
+  updateBodyBackground();
 
   /* ================= SECTION TITLE ================= */
   function addSectionTitle(txt) {
@@ -124,7 +123,7 @@ function createUI() {
   }
 
   /* ================= SLIDER ================= */
-  function addSlider(label, key, min, max, step = 1) {
+  function addSlider(label, key, min, max, step = 1, onChangeExtra) {
     const wrap = document.createElement("div");
     wrap.style.marginBottom = "14px";
 
@@ -155,28 +154,25 @@ function createUI() {
       appearance: "none",
     });
 
-    const css = `
-      input[type=range]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.95);
-        box-shadow: 0 0 8px rgba(255,255,255,0.6);
-        border: 1px solid rgba(0,0,0);
-      }
-      input[type=range]::-moz-range-thumb {
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.95);
-        box-shadow: 0 0 8px rgba(255,255,255,0.6);
-        border: 1px solid rgba(0,0,0);
-      }
-    `;
     if (!window.__FG_SLIDER_STYLE) {
       const st = document.createElement("style");
-      st.innerHTML = css;
+      st.innerHTML = `
+        input[type=range]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 14px; height: 14px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.95);
+          box-shadow: 0 0 8px rgba(255,255,255,0.6);
+          border: 1px solid rgba(0,0,0);
+        }
+        input[type=range]::-moz-range-thumb {
+          width: 14px; height: 14px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.95);
+          box-shadow: 0 0 8px rgba(255,255,255,0.6);
+          border: 1px solid rgba(0,0,0);
+        }
+      `;
       document.head.appendChild(st);
       window.__FG_SLIDER_STYLE = true;
     }
@@ -184,84 +180,152 @@ function createUI() {
     sl.oninput = () => {
       uiValues[key] = Number(sl.value);
       lb.textContent = `${label}: ${sl.value}`;
+      if (onChangeExtra) onChangeExtra(Number(sl.value));
     };
 
     wrap.appendChild(sl);
     panel.appendChild(wrap);
+    return sl; // return so callers can cross-link sliders
   }
-function createHelpPanel() {
-  const panel = document.createElement("div");
-  panel.id = "fg-help";
 
-  Object.assign(panel.style, {
-    position: "fixed",
-    top: "0",
-    right: "0",
-    width: "300px",
-    height: "100vh",
-    padding: "16px",
-    boxSizing: "border-box",
-    background: "rgba(255,255,255)",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
-    borderLeft: "1px solid rgba(0,0,0)",
-    color: "#000",
-    overflowY: "auto",
-    zIndex: "99998",
-  });
+  /* ================= HELP PANEL (inner fn) ================= */
+  function createHelpPanel() {
+    const hp = document.createElement("div");
+    hp.id = "fg-help";
 
-  panel.innerHTML = `
-    <div style="font-size:15px;font-weight:600;letter-spacing:0.4px;margin-bottom:12px;">
-      HOW TO USE
-    </div>
+    Object.assign(hp.style, {
+      position: "fixed",
+      top: "0",
+      right: "0",
+      width: "300px",
+      height: "100vh",
+      padding: "16px",
+      boxSizing: "border-box",
+      background: "rgba(255,255,255)",
+      backdropFilter: "blur(12px)",
+      WebkitBackdropFilter: "blur(12px)",
+      borderLeft: "1px solid rgba(0,0,0)",
+      color: "#000",
+      overflowY: "auto",
+      zIndex: "99998",
+    });
 
-    <div style="font-size:12px;line-height:1.55;opacity:0.75;">
-      <strong>PALETTE CONTROLS</strong><br><br>
+    hp.innerHTML = `
+      <div style="font-size:15px;font-weight:600;letter-spacing:0.4px;margin-bottom:12px;">
+        HOW TO USE
+      </div>
 
-      • <b>Saturation</b><br>
-      Controls the color intensity.<br>
-      Higher values produce stronger colors.<br><br>
+      <div style="font-size:12px;line-height:1.55;opacity:0.75;">
+        <strong>PALETTE CONTROLS</strong><br><br>
 
-      • <b>Brightness</b><br>
-      Controls overall lightness of the palette.<br>
-      Higher values create brighter visuals.<br><br>
+        • <b>Saturation</b><br>
+        Controls color intensity.<br>
+        Higher = stronger, more vivid colors.<br><br>
 
-      • <b>Hue Bins</b><br>
-      Defines how many distinct hue groups are used.<br>
-      Higher values increase color variation.<br><br>
+        • <b>Brightness</b><br>
+        Controls overall lightness.<br>
+        Higher = brighter visuals.<br><br>
 
-      • <b>Sample Step</b><br>
-      Controls how densely colors are sampled from an image.<br>
-      Lower values capture more detail.<br><br>
+        • <b>Hue Bins</b><br>
+        Number of distinct color groups sampled.<br>
+        Higher = more color variety.<br><br>
 
-<strong>VIEW & EXPORT</strong><br><br>
+        • <b>Sample Step</b><br>
+        Density of pixel sampling from your image.<br>
+        Lower = finer color detail captured.<br><br>
 
-• <b>Realtime View</b><br>
-Preview and adjust visuals in real time.<br><br>
+        <strong>💡 HUE &amp; STEP GUIDE</strong><br><br>
+        For the cleanest results, match these two sliders:<br><br>
+        &nbsp;↑ <b>Hue high (8–12)</b> → use <b>Step high (6–10)</b><br>
+        &nbsp;&nbsp;&nbsp;More colors, broader sampling — avoids noise.<br><br>
+        &nbsp;↓ <b>Hue low (3–5)</b> → use <b>Step low (1–3)</b><br>
+        &nbsp;&nbsp;&nbsp;Fewer colors, fine sampling — sharp, minimal.<br><br>
+        Mismatching (high Hue + low Step) can produce<br>
+        muddy or overly busy visuals.<br><br>
 
-• <b>Export Image</b><br>
-Save the current frame as an image.<br><br>
+        <strong>APPLY vs SHUFFLE</strong><br><br>
+        • <b>APPLY</b> — Re-extracts a fresh set of colors<br>
+        from your image (or generates new random ones)<br>
+        using the current slider values. Best blends come<br>
+        from trying APPLY a few times.<br><br>
+        • <b>SHUFFLE</b> — Keeps the current colors but<br>
+        re-draws a new sample variation from the same<br>
+        image with a different random seed — gives you<br>
+        new picks without changing sliders.<br><br>
 
-• <b>Render Video (PNG)</b><br>
-Generate a high-quality image sequence for video export.<br>
-Render quality depends on your machine performance.<br><br>
+        <strong>VIEW &amp; EXPORT</strong><br><br>
+        • <b>Export PNG</b> — Saves current frame.<br><br>
+        • <b>Start / Stop Recording</b> — Records a live<br>
+        WebM video. A <span style="color:#c00;font-weight:700">● REC</span> indicator appears<br>
+        while recording is active.<br><br>
 
-<strong>RENDER NOTE</strong><br><br>
-For best results, use Render Video on a powerful machine.<br>
-Stronger hardware allows smoother motion and higher visual fidelity.
-</div>
-  `;
+        <strong>RENDER NOTE</strong><br><br>
+        Video quality scales with your machine.<br>
+        For best results (≥ 80/100), use a modern GPU.<br>
+        Recording at a steady 30 fps canvas stream<br>
+        ensures smooth playback on most machines.
+      </div>
+    `;
 
-  document.body.appendChild(panel);
-}
-
+    document.body.appendChild(hp);
+  }
 
   /* ================= SLIDERS ================= */
   addSectionTitle("Palette Controls");
-  addSlider("Saturation", "minSaturation", 0, 100);
-  addSlider("Brightness", "brightness", 0, 100);
-  addSlider("Hue Bins", "hueBins", 3, 12, 1);
-  addSlider("Sample Step", "sampleStep", 1, 10, 1);
+  addSlider("Saturation",   "minSaturation", 0, 100);
+  addSlider("Brightness",   "brightness",    0, 100);
+
+  // Bug #5 — Hue and Step hint: show a small inline tip whenever
+  // the two values are mismatched, and auto-suggest the paired value.
+  const hintEl = document.createElement("div");
+  hintEl.id = "fg-hue-step-hint";
+  Object.assign(hintEl.style, {
+    fontSize: "11px",
+    lineHeight: "1.45",
+    padding: "7px 9px",
+    marginBottom: "10px",
+    borderRadius: "6px",
+    background: "rgba(78,140,255,0.10)",
+    border: "1px solid rgba(78,140,255,0.30)",
+    color: "#2255bb",
+    display: "none",
+  });
+  panel.appendChild(hintEl);
+
+  function updateHueStepHint() {
+    const hue  = uiValues.hueBins;
+    const step = uiValues.sampleStep;
+
+    // Ideal: both in same band (low ≤5 | mid 6–8 | high ≥9)
+    const hueBand  = hue  <= 5 ? 0 : hue  <= 8 ? 1 : 2;
+    const stepBand = step <= 3 ? 0 : step <= 6 ? 1 : 2;
+
+    if (hueBand === stepBand) {
+      hintEl.style.display = "none";
+      return;
+    }
+
+    hintEl.style.display = "block";
+
+    if (hueBand > stepBand) {
+      // Hue high, step too low → muddy
+      const suggested = hue >= 9 ? "6–10" : "4–7";
+      hintEl.textContent =
+        `💡 Hue ${hue} is high — try Step ${suggested} for cleaner blends.`;
+    } else {
+      // Step high, hue too low → undersampled
+      const suggested = step >= 7 ? "7–12" : "5–8";
+      hintEl.textContent =
+        `💡 Step ${step} is high — try Hue Bins ${suggested} for richer color.`;
+    }
+  }
+
+  addSlider("Hue Bins",    "hueBins",    3, 12, 1, updateHueStepHint);
+  addSlider("Sample Step", "sampleStep", 1, 10, 1, updateHueStepHint);
+
+  // Move hint below Sample Step (it was inserted before the sliders)
+  panel.appendChild(hintEl);
+  updateHueStepHint();
 
   /* ================= APPLY / SHUFFLE ================= */
   const btnRow = document.createElement("div");
@@ -300,33 +364,91 @@ Stronger hardware allows smoother motion and higher visual fidelity.
   });
   btnRow.appendChild(shuffleBtn);
 
-  /* ================= APPLY LOGIC (GỘP 1 LẦN) ================= */
+  /* ================= APPLY LOGIC ================= */
+  // Bug #4 — APPLY: always re-extracts with current slider values,
+  // tries multiple blend candidates and picks the set with highest
+  // average pairwise color distance (most visually distinct palette).
   applyBtn.onclick = async () => {
+    applyBtn.disabled = true;
+    applyBtn.textContent = "…";
+
     if (img) {
-      const pal = await extractPaletteFromImage(img, uiValues.sampleStep);
-      gradients = pal.slice(0, gradientCount);
+      // Run 3 extraction passes and keep the most varied palette
+      const candidates = await Promise.all([
+        extractPaletteFromImage(img, uiValues.sampleStep),
+        extractPaletteFromImage(img, Math.max(1, uiValues.sampleStep - 1)),
+        extractPaletteFromImage(img, Math.min(10, uiValues.sampleStep + 1)),
+      ]);
+
+      let best = candidates[0];
+      let bestScore = _paletteDiversity(candidates[0]);
+      for (let i = 1; i < candidates.length; i++) {
+        const s = _paletteDiversity(candidates[i]);
+        if (s > bestScore) { bestScore = s; best = candidates[i]; }
+      }
+      gradients = best.slice(0, gradientCount);
     } else {
       randomizePaletteWithConstraints();
     }
+
     ensureFullPalette();
     updatePalettePreviewUI();
-	  updateBodyBackground();
+    updateBodyBackground();
+
+    applyBtn.disabled = false;
+    applyBtn.textContent = "APPLY";
   };
 
-  /* ================= SHUFFLE ================= */
-  shuffleBtn.onclick = () => {
-    for (let i = gradients.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [gradients[i], gradients[j]] = [gradients[j], gradients[i]];
+  /* ================= SHUFFLE LOGIC ================= */
+  // Bug #4 — SHUFFLE when image loaded: re-extracts a fresh sample
+  // with a slightly randomised step so it genuinely picks new colors
+  // rather than just reordering the existing ones.
+  shuffleBtn.onclick = async () => {
+    if (img) {
+      shuffleBtn.disabled = true;
+      shuffleBtn.textContent = "…";
+
+      // Vary step randomly ±2 around current value for new picks
+      const baseStep = uiValues.sampleStep;
+      const jitter   = Math.floor(Math.random() * 5) - 2; // -2..+2
+      const step     = Math.max(1, Math.min(10, baseStep + jitter));
+
+      const pal = await extractPaletteFromImage(img, step);
+      gradients = pal.slice(0, gradientCount);
+      ensureFullPalette();
+
+      shuffleBtn.disabled = false;
+      shuffleBtn.textContent = "SHUFFLE";
+    } else {
+      // No image: shuffle existing order (original behaviour)
+      for (let i = gradients.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [gradients[i], gradients[j]] = [gradients[j], gradients[i]];
+      }
     }
+
     updatePalettePreviewUI();
-	  updateBodyBackground();
+    updateBodyBackground();
   };
 }
 
 /* ==========================================================
-   PALETTE PREVIEW UI
+   PALETTE DIVERSITY SCORE
+   Average pairwise RGB distance — higher = more varied palette.
+   Used by APPLY to pick the best of several extraction candidates.
 ========================================================== */
+function _paletteDiversity(pal) {
+  if (!pal || pal.length < 2) return 0;
+  let total = 0, count = 0;
+  for (let i = 0; i < pal.length; i++) {
+    for (let j = i + 1; j < pal.length; j++) {
+      total += colorDistanceRGB(pal[i], pal[j]);
+      count++;
+    }
+  }
+  return count > 0 ? total / count : 0;
+}
+
 /* ==========================================================
    PALETTE PREVIEW UI
 ========================================================== */
@@ -364,21 +486,14 @@ function updatePalettePreviewUI() {
       cursor: "pointer",
     });
 
-    picker.onfocus = () => {
-      sw.style.outline = "2px solid #000";
-    };
-
-    picker.onblur = () => {
-      sw.style.outline = "none";
-    };
+    picker.onfocus = () => { sw.style.outline = "2px solid #000"; };
+    picker.onblur  = () => { sw.style.outline = "none"; };
 
     picker.oninput = e => {
       const hex = e.target.value;
-
       const r = parseInt(hex.slice(1, 3), 16);
       const g = parseInt(hex.slice(3, 5), 16);
       const b = parseInt(hex.slice(5, 7), 16);
-
       gradients[i] = color(r, g, b);
       sw.style.background = hex;
     };
@@ -388,3 +503,34 @@ function updatePalettePreviewUI() {
   }
 }
 
+/* ==========================================================
+   createHelpPanel — also callable at top-level (legacy call
+   in original main.js uses it outside createUI scope)
+========================================================== */
+function createHelpPanel() {
+  if (document.getElementById("fg-help")) return; // already created
+  const hp = document.createElement("div");
+  hp.id = "fg-help";
+  Object.assign(hp.style, {
+    position: "fixed",
+    top: "0",
+    right: "0",
+    width: "300px",
+    height: "100vh",
+    padding: "16px",
+    boxSizing: "border-box",
+    background: "rgba(255,255,255)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+    borderLeft: "1px solid rgba(0,0,0)",
+    color: "#000",
+    overflowY: "auto",
+    zIndex: "99998",
+  });
+  hp.innerHTML = `
+    <div style="font-size:15px;font-weight:600;letter-spacing:0.4px;margin-bottom:12px;">HOW TO USE</div>
+    <div style="font-size:12px;line-height:1.55;opacity:0.75;">
+      See panel for details.
+    </div>`;
+  document.body.appendChild(hp);
+}
