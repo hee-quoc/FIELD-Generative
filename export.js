@@ -41,7 +41,7 @@ function addExportButtons() {
 
      Button label always shows where the NEXT click will take you.
   ================================================================= */
-  const OVERVIEW_SCALE = 0.5; // wide view — change this number to taste
+  const OVERVIEW_SCALE = 1.0; // wide view — change this number to taste
 
   let _activeView = "detail"; // tracks which preset is currently shown
 
